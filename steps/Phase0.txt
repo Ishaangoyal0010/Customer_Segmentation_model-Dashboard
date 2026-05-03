@@ -1,0 +1,54 @@
+1. Create project folder
+
+customer-segmentation/
+
+├── data/
+│       - raw/ecommerce.csv
+│       - processed/cleaned.csv
+├── notebook/
+│       - eda.ipynb
+├── src/
+│       - feature_engineering.py
+│       - train.py
+├── artifacts/
+│       - best_model.pkl
+│       - scaler.pkl
+│       - pca.pkl
+│       - segmented_customers.csv
+├── app/
+│       - streamlit_app.py
+│       - api.py
+├── utils/
+│       - s3_utils.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+├── mlflow.db
+
+2. Open terminal inside VS Code
+
+3. Create virtual environment and activate it
+
+>python -m venv venv
+>venv\Scripts\activate
+
+>Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+>.\venv\Scripts\Activate.ps1
+
+(venv) prefix should appear in terminal after this
+
+4. Install basic dependencies
+
+>pip install pandas numpy matplotlib seaborn scikit-learn
+>pip install mlflow fastapi uvicorn streamlit plotly boto3 python-multipart
+
+5. Test FastAPI is working
+
+#from fastapi import FastAPI
+#app = FastAPI()
+#@app.get("/")
+#def home():
+#    return {"message": "Segmentation API is running"}
+
+>uvicorn app.api:app --reload
+open http://127.0.0.1:8000

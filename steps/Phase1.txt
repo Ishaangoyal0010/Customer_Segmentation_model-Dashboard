@@ -1,0 +1,78 @@
+VIRTUAL ENVIRONMENT SETUP ✔️
+
+6. Download dataset from Kaggle
+   search "Online Retail UCI" on Kaggle
+   download CSV → rename to ecommerce.csv
+   put it inside data/raw/
+
+7. Run EDA notebook
+   open notebook/eda.ipynb in Jupyter
+   run all cells top to bottom
+
+   what it does:
+   - loads data/raw/ecommerce.csv
+   - removes missing CustomerID rows
+   - removes cancelled orders (InvoiceNo starts with C)
+   - removes negative quantity and price rows
+   - creates TotalSpend = Quantity * UnitPrice
+   - builds RFM features (Recency, Frequency, Monetary)
+   - caps outliers at 99th percentile
+   - saves cleaned data to data/processed/cleaned.csv
+
+   check data/processed/cleaned.csv is created ✔️
+
+8. Run feature engineering
+
+>cd src
+>python feature_engineering.py
+
+   what it does:
+   - loads data/processed/cleaned.csv
+   - scales RFM features using StandardScaler
+   - saves scaler to artifacts/scaler.pkl
+
+   check artifacts/scaler.pkl is created ✔️
+
+9. Train models
+
+>python train.py
+
+   what it does:
+   - trains 4 models: KMeans, Agglomerative, GaussianMixture, DBSCAN
+   - logs all runs to MLflow (mlflow.db)
+   - picks best model by silhouette score
+   - assigns segment labels: Champions, Loyal Customers, New Customers, At Risk
+   - saves PCA plot to artifacts/pca_clusters.png
+   - saves best_model.pkl, scaler.pkl, pca.pkl, segmented_customers.csv
+
+   check artifacts/ folder has all 4 files ✔️
+
+10. Check MLflow experiment tracking
+
+>mlflow ui --backend-store-uri sqlite:///mlflow.db
+
+   open http://localhost:5000
+   you should see 4 runs with silhouette, davies_bouldin, calinski scores
+
+   EXPERIMENT TRACKING ✔️
+
+11. Create requirements.txt
+
+>pip freeze > requirements.txt
+
+   create .gitignore and add:
+   venv/
+   __pycache__/
+   mlruns/
+   artifacts/
+   .env
+   *.pyc
+
+12. First push to GitHub (after model saving)
+
+>git init
+>git add .
+>git commit -m "Initial commit - EDA, training, model saving"
+>git remote add origin https://github.com/yourusername/customer-segmentation.git
+>git branch -M main
+>git push origin main
