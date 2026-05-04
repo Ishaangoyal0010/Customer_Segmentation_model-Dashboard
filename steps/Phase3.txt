@@ -1,0 +1,84 @@
+BACKEND DOCKERFILE ✔️
+PUSH TO DOCKER HUB ✔️
+PUSH TO GITHUB ✔️
+
+19. Build Streamlit frontend (app/streamlit_app.py)
+
+   what it shows:
+   - sidebar filters (segment, country)
+   - KPI cards (total customers, avg recency, avg frequency, avg spend)
+   - segment distribution pie + bar chart
+   - RFM breakdown per segment (3 bar charts)
+   - PCA scatter plot of clusters
+   - business insights section with action for each segment
+   - upload new CSV → predict segments → download results
+
+   run locally to test:
+>cd app
+>streamlit run streamlit_app.py
+
+   open http://localhost:8501 ✔️
+
+20. Dockerfile for frontend (inside app/)
+
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8501
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+
+21. Build and run frontend docker container
+
+>docker build -t segmentation-frontend .
+>docker run -d -p 8501:8501 segmentation-frontend
+
+   open http://localhost:8501 to verify ✔️
+
+22. Push frontend image to Docker Hub
+
+>docker login
+>docker tag segmentation-frontend yourusername/segmentation-frontend:v1
+>docker push yourusername/segmentation-frontend:v1
+
+   FRONTEND DOCKERFILE ✔️
+   PUSH TO DOCKER HUB ✔️
+
+23. fourth GitHub push(frontend done)
+
+24. Docker Compose to run both backend and frontend together
+    create docker-compose.yml at project root
+
+version: '3'
+services:
+  backend:
+    build: ./app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+  frontend:
+    build: ./app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    environment:
+      - API_URL=http://backend:8000
+
+25. Run everything together
+
+>docker-compose up
+
+   backend  → http://localhost:8000/docs
+   frontend → http://localhost:8501
+   test full flow: upload CSV on streamlit → hits FastAPI → returns segments ✔️
+
+26. fifth push to GitHub (final with all files)
+
+>git add .
+>git commit -m "Added Streamlit frontend, Docker Compose, full pipeline complete"
+>git push origin main
+
+   FULL PIPELINE COMPLETE ✔️
