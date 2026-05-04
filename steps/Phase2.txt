@@ -1,0 +1,67 @@
+DATA PREPARATION ✔️
+EDA ✔️
+FEATURE ENGINEERING ✔️
+TRAINING ✔️
+EXPERIMENT TRACKING ✔️
+MODEL SAVING ✔️
+
+13. Build FastAPI backend (app/api.py)
+
+   endpoints:
+   GET  /          → health check
+   GET  /summary   → segment counts + avg RFM per segment
+   GET  /segments  → top 100 customers with segment labels
+   POST /predict   → upload new CSV → returns predicted clusters
+
+   test locally:
+>cd app
+>uvicorn api:app --reload
+
+   open http://127.0.0.1:8000/docs
+   test each endpoint from the UI
+   status 200 means working fine
+
+   API DEVELOPMENT ✔️
+
+14. Second push to GitHub (after API development)
+
+>git add .
+>git commit -m "Added FastAPI backend with predict endpoint"
+>git push origin main
+
+15. Dockerize the backend (write Dockerfile inside app/)
+
+# Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir -r requirements.txt
+EXPOSE 8000
+CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+   create .dockerignore and add:
+   .git/
+   venv/
+   __pycache__/
+   mlruns/
+   .gitignore
+   notebooks/
+
+16. Build and run docker container
+
+>docker build -t segmentation-backend .
+>docker run -d -p 8000:8000 segmentation-backend
+
+   open http://localhost:8000/docs to verify ✔️
+
+17. Push backend image to Docker Hub
+
+>docker login
+>docker tag segmentation-backend yourusername/segmentation-backend:v1
+>docker push yourusername/segmentation-backend:v1
+
+18. Third push to GitHub (after dockerization)
+
+>git add .
+>git commit -m "Added Dockerfile for backend"
+>git push origin main

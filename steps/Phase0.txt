@@ -41,6 +41,8 @@ customer-segmentation/
 
 >pip install pandas numpy matplotlib seaborn scikit-learn
 >pip install mlflow fastapi uvicorn streamlit plotly boto3 python-multipart
+OR
+>python -m pip install -r requirements.txt
 
 5. Test FastAPI is working
 
