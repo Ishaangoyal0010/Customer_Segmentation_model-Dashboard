@@ -1,36 +1,38 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pickle
 import os
 import plotly.express as px
 
 st.set_page_config(page_title='Customer Segmentation', layout='wide')
 
-ARTIFACTS_DIR = '../artifacts'
+BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
+ARTIFACTS_DIR = os.path.join(BASE_DIR, '..', 'artifacts')
 
-# load artifacts
+
+# ── load artifacts ─────────────────────────────────────────────────────────────
 @st.cache_resource
 def load_artifacts():
-    with open(f'{ARTIFACTS_DIR}/best_model.pkl', 'rb') as f:
+    with open(os.path.join(ARTIFACTS_DIR, 'best_model.pkl'), 'rb') as f:
         model = pickle.load(f)
-    with open(f'{ARTIFACTS_DIR}/scaler.pkl', 'rb') as f:
+    with open(os.path.join(ARTIFACTS_DIR, 'scaler.pkl'), 'rb') as f:
         scaler = pickle.load(f)
-    with open(f'{ARTIFACTS_DIR}/pca.pkl', 'rb') as f:
+    with open(os.path.join(ARTIFACTS_DIR, 'pca.pkl'), 'rb') as f:
         pca = pickle.load(f)
     return model, scaler, pca
 
+
 @st.cache_data
 def load_data():
-    return pd.read_csv(f'{ARTIFACTS_DIR}/segmented_customers.csv')
+    return pd.read_csv(os.path.join(ARTIFACTS_DIR, 'segmented_customers.csv'))
+
 
 model, scaler, pca = load_artifacts()
 df = load_data()
 
 
-# sidebar 
+# ── sidebar filters ────────────────────────────────────────────────────────────
 st.sidebar.title('Filters')
 
 segments = ['All'] + list(df['Segment'].unique())
@@ -46,30 +48,29 @@ if selected_country != 'All':
     filtered = filtered[filtered['Country'] == selected_country]
 
 
-# header 
+# ── header ─────────────────────────────────────────────────────────────────────
 st.title('Customer Segmentation Dashboard')
 st.markdown('Business-focused analysis using RFM + Clustering')
 st.markdown('---')
 
 
-# top KPIs
+# ── KPIs ───────────────────────────────────────────────────────────────────────
 col1, col2, col3, col4 = st.columns(4)
-col1.metric('Total Customers',  len(filtered))
+col1.metric('Total Customers',    len(filtered))
 col2.metric('Avg Recency (days)', f"{filtered['Recency'].mean():.0f}")
-col3.metric('Avg Frequency',    f"{filtered['Frequency'].mean():.1f}")
-col4.metric('Avg Spend',        f"£{filtered['Monetary'].mean():.0f}")
-
+col3.metric('Avg Frequency',      f"{filtered['Frequency'].mean():.1f}")
+col4.metric('Avg Spend',          f"£{filtered['Monetary'].mean():.0f}")
 st.markdown('---')
 
 
-# segment distribution 
+# ── segment distribution ───────────────────────────────────────────────────────
 st.subheader('Segment Distribution')
-
 col1, col2 = st.columns(2)
 
+seg_counts = df['Segment'].value_counts().reset_index()
+seg_counts.columns = ['Segment', 'Count']
+
 with col1:
-    seg_counts = df['Segment'].value_counts().reset_index()
-    seg_counts.columns = ['Segment', 'Count']
     fig = px.pie(seg_counts, names='Segment', values='Count', title='Customer Segments')
     st.plotly_chart(fig, use_container_width=True)
 
@@ -78,34 +79,30 @@ with col2:
     st.plotly_chart(fig, use_container_width=True)
 
 
-# RFM by segment 
+# ── RFM by segment ─────────────────────────────────────────────────────────────
 st.subheader('RFM Breakdown by Segment')
-
 rfm_avg = df.groupby('Segment')[['Recency', 'Frequency', 'Monetary']].mean().round(2).reset_index()
 
 col1, col2, col3 = st.columns(3)
-
 with col1:
     fig = px.bar(rfm_avg, x='Segment', y='Recency', title='Avg Recency (lower = better)', color='Segment')
     st.plotly_chart(fig, use_container_width=True)
-
 with col2:
     fig = px.bar(rfm_avg, x='Segment', y='Frequency', title='Avg Frequency', color='Segment')
     st.plotly_chart(fig, use_container_width=True)
-
 with col3:
     fig = px.bar(rfm_avg, x='Segment', y='Monetary', title='Avg Monetary (£)', color='Segment')
     st.plotly_chart(fig, use_container_width=True)
 
 
-# PCA scatter 
+# ── PCA scatter ────────────────────────────────────────────────────────────────
 st.subheader('Customer Clusters - PCA View')
 
-X = df[['Recency', 'Frequency', 'Monetary']]
+X        = df[['Recency', 'Frequency', 'Monetary']]
 X_scaled = scaler.transform(X)
-X_pca = pca.transform(X_scaled)
+X_pca    = pca.transform(X_scaled)
 
-pca_df = pd.DataFrame(X_pca, columns=['PCA1', 'PCA2'])
+pca_df            = pd.DataFrame(X_pca, columns=['PCA1', 'PCA2'])
 pca_df['Segment'] = df['Segment'].values
 
 fig = px.scatter(pca_df, x='PCA1', y='PCA2', color='Segment',
@@ -113,14 +110,14 @@ fig = px.scatter(pca_df, x='PCA1', y='PCA2', color='Segment',
 st.plotly_chart(fig, use_container_width=True)
 
 
-#  business insights
+# ── business insights ──────────────────────────────────────────────────────────
 st.subheader('Business Insights')
 
 insights = {
-    'Champions':        '🏆 High spenders who bought recently → target with premium offers and loyalty rewards',
-    'Loyal Customers':  '💛 Buy often and spend well → upsell and cross-sell new products',
-    'New Customers':    '🆕 Bought recently but not often → onboard them with welcome discounts',
-    'At Risk':          '⚠️ Haven\'t bought in a while → win them back with special discount campaigns',
+    'Champions':       '🏆 High spenders who bought recently → target with premium offers and loyalty rewards',
+    'Loyal Customers': '💛 Buy often and spend well → upsell and cross-sell new products',
+    'New Customers':   '🆕 Bought recently but not often → onboard them with welcome discounts',
+    'At Risk':         '⚠️ Haven\'t bought in a while → win them back with special discount campaigns',
 }
 
 for seg, insight in insights.items():
@@ -129,7 +126,7 @@ for seg, insight in insights.items():
     st.info(f'**{seg}** ({count} customers, {pct:.1f}%)  \n{insight}')
 
 
-# new predict 
+# ── upload new CSV and predict ─────────────────────────────────────────────────
 st.markdown('---')
 st.subheader('Predict Segments for New Data')
 
@@ -171,7 +168,7 @@ if uploaded:
     st.download_button('Download Results', csv, 'predicted_segments.csv', 'text/csv')
 
 
-# dwta table 
+# ── raw data table ─────────────────────────────────────────────────────────────
 st.markdown('---')
 st.subheader('Customer Data')
 st.dataframe(filtered[['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Segment', 'Country']].reset_index(drop=True))
