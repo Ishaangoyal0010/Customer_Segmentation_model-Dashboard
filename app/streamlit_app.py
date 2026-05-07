@@ -11,7 +11,7 @@ BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
 ARTIFACTS_DIR = os.path.join(BASE_DIR, '..', 'artifacts')
 
 
-# ── load artifacts ─────────────────────────────────────────────────────────────
+#  load artifacts
 @st.cache_resource
 def load_artifacts():
     with open(os.path.join(ARTIFACTS_DIR, 'best_model.pkl'), 'rb') as f:
@@ -32,7 +32,7 @@ model, scaler, pca = load_artifacts()
 df = load_data()
 
 
-# ── sidebar filters ────────────────────────────────────────────────────────────
+# sidebar filters 
 st.sidebar.title('Filters')
 
 segments = ['All'] + list(df['Segment'].unique())
@@ -48,13 +48,12 @@ if selected_country != 'All':
     filtered = filtered[filtered['Country'] == selected_country]
 
 
-# ── header ─────────────────────────────────────────────────────────────────────
 st.title('Customer Segmentation Dashboard')
 st.markdown('Business-focused analysis using RFM + Clustering')
 st.markdown('---')
 
 
-# ── KPIs ───────────────────────────────────────────────────────────────────────
+# KPIs
 col1, col2, col3, col4 = st.columns(4)
 col1.metric('Total Customers',    len(filtered))
 col2.metric('Avg Recency (days)', f"{filtered['Recency'].mean():.0f}")
@@ -63,7 +62,7 @@ col4.metric('Avg Spend',          f"£{filtered['Monetary'].mean():.0f}")
 st.markdown('---')
 
 
-# ── segment distribution ───────────────────────────────────────────────────────
+# segment distribution
 st.subheader('Segment Distribution')
 col1, col2 = st.columns(2)
 
@@ -79,7 +78,7 @@ with col2:
     st.plotly_chart(fig, use_container_width=True)
 
 
-# ── RFM by segment ─────────────────────────────────────────────────────────────
+#RFM by segment
 st.subheader('RFM Breakdown by Segment')
 rfm_avg = df.groupby('Segment')[['Recency', 'Frequency', 'Monetary']].mean().round(2).reset_index()
 
@@ -95,7 +94,7 @@ with col3:
     st.plotly_chart(fig, use_container_width=True)
 
 
-# ── PCA scatter ────────────────────────────────────────────────────────────────
+# PCA scatter
 st.subheader('Customer Clusters - PCA View')
 
 X        = df[['Recency', 'Frequency', 'Monetary']]
@@ -110,14 +109,14 @@ fig = px.scatter(pca_df, x='PCA1', y='PCA2', color='Segment',
 st.plotly_chart(fig, use_container_width=True)
 
 
-# ── business insights ──────────────────────────────────────────────────────────
+# business insights
 st.subheader('Business Insights')
 
 insights = {
-    'Champions':       '🏆 High spenders who bought recently → target with premium offers and loyalty rewards',
-    'Loyal Customers': '💛 Buy often and spend well → upsell and cross-sell new products',
-    'New Customers':   '🆕 Bought recently but not often → onboard them with welcome discounts',
-    'At Risk':         '⚠️ Haven\'t bought in a while → win them back with special discount campaigns',
+    'Champions':       'High spenders who bought recently → premium offers and loyalty rewards',
+    'Loyal Customers': 'Buy often and spend well → cross-sell new products',
+    'New Customers':   'Bought recently but not often → welcome discounts',
+    'At Risk':         "Haven't bought in a while → win them with special offers",
 }
 
 for seg, insight in insights.items():
@@ -126,7 +125,7 @@ for seg, insight in insights.items():
     st.info(f'**{seg}** ({count} customers, {pct:.1f}%)  \n{insight}')
 
 
-# ── upload new CSV and predict ─────────────────────────────────────────────────
+# upload new CSV and predict
 st.markdown('---')
 st.subheader('Predict Segments for New Data')
 
@@ -168,7 +167,7 @@ if uploaded:
     st.download_button('Download Results', csv, 'predicted_segments.csv', 'text/csv')
 
 
-# ── raw data table ─────────────────────────────────────────────────────────────
+# raw data table
 st.markdown('---')
 st.subheader('Customer Data')
 st.dataframe(filtered[['CustomerID', 'Recency', 'Frequency', 'Monetary', 'Segment', 'Country']].reset_index(drop=True))

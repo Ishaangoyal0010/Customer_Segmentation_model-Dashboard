@@ -21,12 +21,12 @@ os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 BEST_K = 4  # change after looking at elbow plot
 
 
-# ── load and scale ─────────────────────────────────────────────────────────
+# load and scale
 df = load_data()
 X_scaled, scaler = scale_features(df)
 
 
-# ── elbow method ───────────────────────────────────────────────────────────
+# elbow method
 inertia = []
 for k in range(2, 11):
     km = KMeans(n_clusters=k, random_state=42, n_init=10)
@@ -42,14 +42,14 @@ plt.show()
 print('elbow plot saved → artifacts/elbow_plot.png')
 
 
-# ── mlflow ─────────────────────────────────────────────────────────────────
+# mlflow
 mlflow.set_tracking_uri('sqlite:///../mlflow.db')
 mlflow.set_experiment('customer_segmentation')
 
 results = []
 
 
-# ── model 1: KMeans ────────────────────────────────────────────────────────
+# 1 KMeans
 with mlflow.start_run(run_name='KMeans'):
     model = KMeans(n_clusters=BEST_K, random_state=42, n_init=10)
     labels = model.fit_predict(X_scaled)
@@ -66,7 +66,7 @@ with mlflow.start_run(run_name='KMeans'):
     print(f'KMeans          | sil={sil:.3f} | db={db:.3f} | ch={ch:.1f}')
 
 
-# ── model 2: Agglomerative ─────────────────────────────────────────────────
+# 2 Agglomerative Clustering
 with mlflow.start_run(run_name='Agglomerative'):
     model = AgglomerativeClustering(n_clusters=BEST_K)
     labels = model.fit_predict(X_scaled)
@@ -82,7 +82,7 @@ with mlflow.start_run(run_name='Agglomerative'):
     print(f'Agglomerative   | sil={sil:.3f} | db={db:.3f} | ch={ch:.1f}')
 
 
-# ── model 3: Gaussian Mixture ──────────────────────────────────────────────
+# 3 Gaussian Mixture 
 with mlflow.start_run(run_name='GaussianMixture'):
     model = GaussianMixture(n_components=BEST_K, random_state=42)
     model.fit(X_scaled)
@@ -100,7 +100,7 @@ with mlflow.start_run(run_name='GaussianMixture'):
     print(f'GaussianMixture | sil={sil:.3f} | db={db:.3f} | ch={ch:.1f}')
 
 
-# ── model 4: DBSCAN ────────────────────────────────────────────────────────
+# 4 DBSCAN
 with mlflow.start_run(run_name='DBSCAN'):
     model = DBSCAN(eps=0.5, min_samples=5)
     labels = model.fit_predict(X_scaled)
@@ -124,14 +124,14 @@ with mlflow.start_run(run_name='DBSCAN'):
     print(f'DBSCAN          | sil={sil:.3f} | db={db:.3f} | ch={ch:.1f}')
 
 
-# ── compare all models ─────────────────────────────────────────────────────
+# compare models
 results_df = pd.DataFrame(results)[['model', 'silhouette', 'db', 'ch']]
 results_df = results_df.sort_values('silhouette', ascending=False)
 print('\n--- model comparison ---')
 print(results_df.to_string(index=False))
 
 
-# ── pick best model ────────────────────────────────────────────────────────
+# pick best model
 best        = max(results, key=lambda x: x['silhouette'])
 best_labels = best['labels']
 best_model  = best['object']
@@ -139,30 +139,38 @@ print(f"\nbest model : {best['model']}")
 print(f"silhouette : {best['silhouette']:.3f}")
 
 
-# ── assign segment labels ──────────────────────────────────────────────────
+#assign segment labels
 df['Cluster'] = best_labels
 
 cluster_summary = df.groupby('Cluster')[['Recency', 'Frequency', 'Monetary']].mean()
 cluster_summary['MonetaryRank'] = cluster_summary['Monetary'].rank(ascending=False)
 cluster_summary['RecencyRank']  = cluster_summary['Recency'].rank(ascending=True)
 
-label_map = {}
-for cid, row in cluster_summary.iterrows():
-    if row['MonetaryRank'] == 1 and row['RecencyRank'] <= 2:
-        label_map[cid] = 'Champions'
-    elif row['MonetaryRank'] <= 2:
-        label_map[cid] = 'Loyal Customers'
-    elif row['RecencyRank'] == 1:
-        label_map[cid] = 'New Customers'
-    else:
-        label_map[cid] = 'At Risk'
+# label each customer directly based on their own RFM values
+# using percentiles on actual data not cluster means(it caused imbalance before)
 
-df['Segment'] = df['Cluster'].map(label_map)
+r_33  = df['Recency'].quantile(0.33)
+r_66  = df['Recency'].quantile(0.66)
+m_50  = df['Monetary'].quantile(0.50)
+m_75  = df['Monetary'].quantile(0.75)
+f_50  = df['Frequency'].quantile(0.50)
+
+def assign_segment(row):
+    if row['Monetary'] >= m_75 and row['Recency'] <= r_33:
+        return 'Champions'
+    elif row['Monetary'] >= m_50 and row['Frequency'] >= f_50:
+        return 'Loyal Customers'
+    elif row['Recency'] <= r_33:
+        return 'New Customers'
+    else:
+        return 'At Risk'
+
+df['Segment'] = df.apply(assign_segment, axis=1)
 print('\nsegment counts:')
 print(df['Segment'].value_counts())
 
 
-# ── PCA plot ───────────────────────────────────────────────────────────────
+# PCA plot
 pca = PCA(n_components=2)
 X_pca = pca.fit_transform(X_scaled)
 
@@ -179,7 +187,7 @@ plt.savefig(f'{ARTIFACTS_DIR}/pca_clusters.png')
 plt.show()
 
 
-# ── save everything ────────────────────────────────────────────────────────
+# saving fiea
 with open(f'{ARTIFACTS_DIR}/best_model.pkl', 'wb') as f:
     pickle.dump(best_model, f)
 
@@ -196,4 +204,3 @@ print('  artifacts/best_model.pkl')
 print('  artifacts/scaler.pkl')
 print('  artifacts/pca.pkl')
 print('  artifacts/segmented_customers.csv')
-print('\nrun streamlit → cd app && streamlit run streamlit_app.py')
