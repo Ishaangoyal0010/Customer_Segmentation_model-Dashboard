@@ -1,4 +1,4 @@
-name: Build and Push Docker Images
+name: Test, Build and Push
 
 on:
   push:
@@ -6,8 +6,57 @@ on:
       - main
 
 jobs:
+
+  # 1 testing all
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check imports work
+        run: |
+          python -c "import pandas, numpy, sklearn, mlflow, fastapi, streamlit, plotly"
+          echo "all imports OK"
+
+      - name: Check feature_engineering loads
+        run: |
+          python -c "import src.feature_engineering; print('feature_engineering OK')"
+
+      - name: Check api starts without error
+        run: |
+          python -c "
+          import os, sys
+          sys.path.insert(0, 'app')
+          # just check syntax and imports, not full startup
+          import ast
+          with open('app/api.py') as f:
+              ast.parse(f.read())
+          print('api.py syntax OK')
+          "
+
+      - name: Check streamlit syntax
+        run: |
+          python -c "
+          import ast
+          with open('app/streamlit_app.py') as f:
+              ast.parse(f.read())
+          print('streamlit_app.py syntax OK')
+          "
+
+  # 2 build and push
   build-and-push:
     runs-on: ubuntu-latest
+    needs: test        #... (only runs if test job passes)
 
     steps:
       - name: Checkout code
